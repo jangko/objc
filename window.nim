@@ -25,51 +25,51 @@ type
   CMPoint = object
     x, y: float64
     
-proc NSStr(a: string): ID =
-  objc_msgSend(getClass("NSString").ID, @"stringWithUTF8String:", a.cstring)
+proc `@`(a: string): ID =
+  objc_msgSend(getClass("@ing").ID, !"stringWithUTF8String:", a.cstring)
   
 let NSBackingStoreBuffered = 2.cuint
   
 proc newClass(cls: string): ID =
-  objc_msgSend(objc_msgSend(getClass(cls).ID, @"alloc"), @"init")
+  objc_msgSend(objc_msgSend(getClass(cls).ID, !"alloc"), !"init")
 
 proc main() =
-  discard objc_msgSend(getClass("NSApplication").ID, @"sharedApplication")
+  discard objc_msgSend(getClass("NSApplication").ID, !"sharedApplication")
   
   if NSApp.isNil:
     echo "Failed to initialized NSApplication...  terminating..."
     return
     
-  discard objc_msgSend(NSApp, @"setActivationPolicy:", NSApplicationActivationPolicyRegular.cint)
+  discard objc_msgSend(NSApp, !"setActivationPolicy:", NSApplicationActivationPolicyRegular.cint)
   
   # Create the menubar
   var menuBar = newClass("NSMenu")
   var appMenuItem = newClass("NSMenuItem")
     
-  discard menuBar.objc_msgSend(@"addItem:", appMenuItem)
-  discard NSApp.objc_msgSend(@"setMainMenu:", menuBar)
+  discard menuBar.objc_msgSend(!"addItem:", appMenuItem)
+  discard NSApp.objc_msgSend(!"setMainMenu:", menuBar)
 
   var appMenu = newClass("NSMenu")
 
-  var quitTitle = NSStr("Quit ")
-  var quitMenuItem = objc_msgSend(getClass("NSMenuItem").ID, @"alloc")
-  quitMenuItem = objc_msgSend(quitMenuItem, @"initWithTitle:action:keyEquivalent:", quitTitle, @"terminate:", NSStr("q"))
+  var quitTitle = @("Quit ")
+  var quitMenuItem = objc_msgSend(getClass("NSMenuItem").ID, !"alloc")
+  quitMenuItem = objc_msgSend(quitMenuItem, !"initWithTitle:action:keyEquivalent:", quitTitle, !"terminate:", @("q"))
   
-  discard appMenu.objc_msgSend(@"addItem:", quitMenuItem)
-  discard appMenuItem.objc_msgSend(@"setSubmenu:", appMenu)
+  discard appMenu.objc_msgSend(!"addItem:", quitMenuItem)
+  discard appMenuItem.objc_msgSend(!"setSubmenu:", appMenu)
   
-  var mainWindow = objc_msgSend(getClass("NSWindow").ID, @"alloc")
+  var mainWindow = objc_msgSend(getClass("NSWindow").ID, !"alloc")
   var rect = CMRect(x:0,y:0,w:200,h:200)
-  discard mainWindow.objc_msgSend(@"initWithContentRect:styleMask:backing:defer:",
+  discard mainWindow.objc_msgSend(!"initWithContentRect:styleMask:backing:defer:",
     rect, NSTitledWindowMask, NSBackingStoreBuffered, false)
   
   var pos = CMPoint(x:20,y:20)
-  discard mainWindow.objc_msgSend(@"cascadeTopLeftFromPoint:", pos)
-  discard mainWindow.objc_msgSend(@"setTitle:", NSStr("Hello"))
-  discard mainWindow.objc_msgSend(@"makeKeyAndOrderFront:", NSApp)
+  discard mainWindow.objc_msgSend(!"cascadeTopLeftFromPoint:", pos)
+  discard mainWindow.objc_msgSend(!"setTitle:", @("Hello"))
+  discard mainWindow.objc_msgSend(!"makeKeyAndOrderFront:", NSApp)
 
   # Bring the app out
-  discard objc_msgSend(NSApp, @("activateIgnoringOtherApps:"), true)
-  discard objc_msgSend(NSApp, @("run"))
+  discard objc_msgSend(NSApp, !("activateIgnoringOtherApps:"), true)
+  discard objc_msgSend(NSApp, !("run"))
 
 main()

@@ -379,7 +379,7 @@ proc sel_registerName(str: cstring): SEL {.objcimport.}
 template registerName*(str: string): untyped =
   sel_registerName(str.cstring)
 
-proc `@`*(str: string): SEL =
+proc `!`*(str: string): SEL =
   sel_registerName(str.cstring)
   
 proc sel_getUid(str: cstring): SEL {.objcimport.}
