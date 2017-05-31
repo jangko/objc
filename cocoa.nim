@@ -1,4 +1,4 @@
-import objc, foundation, strutils
+import objc, foundation, strutils, macros
 
 type
   NSObject = object of RootObj
@@ -15,31 +15,31 @@ type
   NSString = object of NSObject
 
 proc `@`*(a: string): NSString =
-  result.id = objc_msgSend(getClass("NSString").ID, !"stringWithUTF8String:", a.cstring)
+  result.id = objc_msgSend(getClass("NSString").ID, $$"stringWithUTF8String:", a.cstring)
 
 proc objc_alloc(cls: string): ID =
-  objc_msgSend(getClass(cls).ID, !"alloc")
+  objc_msgSend(getClass(cls).ID, $$"alloc")
 
 proc autorelease(obj: NSObject) =
-  discard objc_msgSend(obj.id, !"autorelease")
+  discard objc_msgSend(obj.id, $$"autorelease")
 
 proc init(x: typedesc[NSWindow], rect: CMRect, mask: cuint, backing: cuint, xdefer: BOOL): NSWindow =
   var wnd = objc_alloc("NSWindow")
-  result.id = wnd.objc_msgSend(!"initWithContentRect:styleMask:backing:defer:", rect, mask, backing, xdefer)
+  result.id = wnd.objc_msgSend($$"initWithContentRect:styleMask:backing:defer:", rect, mask, backing, xdefer)
 
 proc init(x: typedesc[NSWindowController], window: NSWindow): NSWindowController =
   var ctrl = objc_alloc("NSWindowController")
-  result.id = ctrl.objc_msgSend(!"initWithWindow:", window.id)
+  result.id = ctrl.objc_msgSend($$"initWithWindow:", window.id)
 
 proc contentView(self: NSWindow, view: NSView) =
-  discard objc_msgSend(self.id, !"setContentView:", view.id)
+  discard objc_msgSend(self.id, $$"setContentView:", view.id)
 
 proc init(x: typedesc[NSTextView], rect: CMRect): NSTextView =
   var view = objc_alloc("NSTextView")
-  result.id = view.objc_msgSend(!"initWithFrame:", rect)
+  result.id = view.objc_msgSend($$"initWithFrame:", rect)
 
 proc insertText(self: NSTextView, text: string) =
-  discard objc_msgSend(self.id, !"insertText:", @text.id)
+  discard objc_msgSend(self.id, $$"insertText:", @text.id)
 
 proc exec(cls: string, cmd: SEL) =
   discard objc_msgSend(getClass(cls).ID, cmd)
@@ -47,12 +47,35 @@ proc exec(cls: string, cmd: SEL) =
 proc `[]`(obj: NSObject, cmd: SEL) =
   discard objc_msgSend(obj.id, cmd)
 
-proc `[]`(id: ID, cmd: SEL) =
-  discard objc_msgSend(id, cmd)
+macro `[]`(id: ID, cmd: SEL, args: varargs[untyped]): untyped =
+  if args.len > 0:
+    let p = "discard objc_msgSend($1, $2, $3)"
+    var z = ""
+    for a in args:
+      z.add(a.toStrLit().strVal)
+    var w = p % [id.toStrLit().strVal, cmd.toStrLit().strVal, z]
+    result = parseStmt(w)
+  else:
+    let p = "discard objc_msgSend($1, $2)"
+    var w = p % [id.toStrLit().strVal, cmd.toStrLit().strVal]
+    result = parseStmt(w)
+
+type
+  AppDelegate = object
+    isa: Class
+    window: ID
+
+proc shouldTerminate(self: ptr AppDelegate, cmd: SEL, notification: ID): BOOL {.cdecl.} =
+  result = YES
+
+proc makeDelegate(): Class =
+  result = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
+  discard result.addMethod($$"applicationShouldTerminateAfterLastWindowClosed:", cast[IMP](shouldTerminate), "B@:@")
+  result.registerClassPair()
 
 proc main() =
   var pool = newClass("NSAutoReleasePool")
-  exec("NSApplication", !"sharedApplication")
+  exec("NSApplication", $$"sharedApplication")
 
   if NSApp.isNil:
     echo "Failed to initialized NSApplication...  terminating..."
@@ -73,9 +96,15 @@ proc main() =
   textView.insertText("Hello OSX/Cocoa World!")
 
   window.contentView(textView)
-  window[!"orderFrontRegardless"]
-  NSApp[!"run"]
+  window[$$"orderFrontRegardless"]
 
-  pool[!"drain"]
+  var AppDelegate = makeDelegate()
+  var appDel = newClass("AppDelegate")
+
+  NSApp[$$"setDelegate:", appDel]
+
+  NSApp[$$"run"]
+  pool[$$"drain"]
+  AppDelegate.disposeClassPair()
 
 main()

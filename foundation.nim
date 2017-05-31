@@ -18,23 +18,23 @@ type
     NSApplicationActivationPolicyRegular
     NSApplicationActivationPolicyAccessory
     NSApplicationActivationPolicyProhibited
-    
+
   CMRect* = object
     x*, y*, w*, h*: float64
-    
+
   CMPoint* = object
     x*, y*: float64
-    
+
   CMSize* = object
-    w*, h*: float64  
+    w*, h*: float64
 
 const
   NSBackingStoreRetained*   : cuint = 0
   NSBackingStoreNonRetained*: cuint = 1
   NSBackingStoreBuffered*   : cuint = 2
-  
+
 proc newClass*(cls: string): ID =
-  objc_msgSend(objc_msgSend(getClass(cls).ID, !"alloc"), !"init")
-  
+  objc_msgSend(objc_msgSend(getClass(cls).ID, $$"alloc"), $$"init")
+
 proc NSMakeRect*(x,y,w,h:float64): CMRect =
   result = CMRect(x:x,y:y,w:w,h:h)
