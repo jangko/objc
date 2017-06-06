@@ -98,7 +98,7 @@ proc class_getInstanceSize(cls: Class): csize {.objcimport.}
 proc getInstanceSize*(cls: Class): int = class_getInstanceSize(cls)
 
 proc class_getInstanceVariable(cls: Class; name: cstring): Ivar {.objcimport.}
-template getIVar*(cls: Class, name: string): untyped =
+template getIvar*(cls: Class, name: string): untyped =
   class_getInstanceVariable(cls, name.cstring)
 
 proc class_getClassVariable(cls: Class; name: cstring): Ivar {.objcimport.}
