@@ -1,4 +1,4 @@
-import objc, foundation, strutils, macros, typetraits
+import objc, foundation, strutils, macros, typetraits, math
 
 type
   NSObject = object of RootObj
@@ -68,12 +68,18 @@ type
     isa: Class
     window: ID
 
-proc shouldTerminate(self: ptr AppDelegate, cmd: SEL, notification: ID): BOOL {.cdecl.} =
+proc shouldTerminate(self: ID, cmd: SEL, notification: ID): BOOL {.cdecl.} =
+  var cls  = self.getClass()
+  var ivar = cls.getIvar("apple")
+  var res = cast[int](self.getIvar(ivar))
+  echo res
+
   result = YES
 
 proc makeDelegate(): Class =
   result = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
   discard result.addMethod($$"applicationShouldTerminateAfterLastWindowClosed:", cast[IMP](shouldTerminate), "c@:@")
+  echo result.addIvar("apple", sizeof(int), log2(sizeof(int).float64).int, "q")
   result.registerClassPair()
 
 proc getSuperMethod(id: ID, sel: SEL): Method =
@@ -151,6 +157,9 @@ proc main() =
   var AppDelegate = makeDelegate()
   var appDel = newClass("AppDelegate")
 
+  var ivar = AppDelegate.getIvar("apple")
+
+  setIvar(appDel, ivar, cast[ID](123))
   NSApp[$$"setDelegate:", appDel]
 
   window.id[$$"display"]
