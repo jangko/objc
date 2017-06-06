@@ -26,7 +26,7 @@ type
   arith_t* = cint
   uarith_t* = cuint
   ptrdiff_t* = int
-  BOOL* = bool
+  BOOL* = cchar
 
   objc_method_description = object
     name: SEL
@@ -68,8 +68,8 @@ type
     OBJC_ASSOCIATION_COPY = 01403
 
 const
-  YES* = true
-  NO*  = false
+  YES* = cchar(1)
+  NO*  = cchar(0)
 
 proc isNil*(a: Class): bool =
   result = a.pointer == nil
@@ -107,7 +107,7 @@ template getClassVariable*(cls: Class; name: string): untyped =
 
 proc class_addIvar(cls: Class; name: cstring; size: csize; alignment: uint8; types: cstring): BOOL {.objcimport.}
 proc addIvar*(cls: Class; name: string; size: int; alignment: int; types: string): bool =
-  class_addIvar(cls, name.cstring, size.csize, alignment.uint8, types.cstring)
+  class_addIvar(cls, name.cstring, size.csize, alignment.uint8, types.cstring) == YES
 
 proc class_copyIvarList(cls: Class; outCount: var cuint): ptr Ivar {.objcimport.}
 proc ivarList*(cls: Class): seq[Ivar] =
@@ -189,7 +189,7 @@ proc class_addProperty(cls: Class; name: cstring;
                        attributeCount: cuint): BOOL {.objcimport.}
 
 proc addProperty*(cls: Class; name: string; attributes: openArray[objc_property_attribute_t]): bool =
-  class_addProperty(cls, name.cstring, attributes[0].unsafeAddr, attributes.len.cuint)
+  class_addProperty(cls, name.cstring, attributes[0].unsafeAddr, attributes.len.cuint) == YES
 
 
 proc class_replaceProperty(cls: Class; name: cstring;
@@ -201,7 +201,7 @@ proc replaceProperty*(cls: Class; name: string; attributes: openArray[objc_prope
 
 proc class_conformsToProtocol(cls: Class; protocol: Protocol): BOOL {.objcimport.}
 template conformsToProtocol*(cls: Class; protocol: Protocol): bool =
-  class_conformsToProtocol(cls, protocol)
+  class_conformsToProtocol(cls, protocol) == YES
 
 proc class_copyProtocolList(cls: Class; outCount: var cuint): ptr Protocol {.objcimport.}
 proc protocolList*(cls: Class): seq[Protocol] =

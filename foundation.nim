@@ -5,11 +5,11 @@ import objc, strutils
 {.passL: "-framework ApplicationServices" .}
 
 const
-  NSBorderlessWindowMask*      : cuint = 0
-  NSTitledWindowMask*          : cuint = 1 shl 0
-  NSClosableWindowMask*        : cuint = 1 shl 1
-  NSMiniaturizableWindowMask*  : cuint = 1 shl 2
-  NSResizableWindowMask*       : cuint = 1 shl 3
+  NSBorderlessWindowMask*     = 0
+  NSTitledWindowMask*         = 1 shl 0
+  NSClosableWindowMask*       = 1 shl 1
+  NSMiniaturizableWindowMask* = 1 shl 2
+  NSResizableWindowMask*      = 1 shl 3
 
 var NSApp* {.importc.}: ID
 
@@ -29,9 +29,9 @@ type
     w*, h*: float64
 
 const
-  NSBackingStoreRetained*   : cuint = 0
-  NSBackingStoreNonRetained*: cuint = 1
-  NSBackingStoreBuffered*   : cuint = 2
+  NSBackingStoreRetained*    = 0
+  NSBackingStoreNonRetained* = 1
+  NSBackingStoreBuffered*    = 2
 
 proc newClass*(cls: string): ID =
   objc_msgSend(objc_msgSend(getClass(cls).ID, $$"alloc"), $$"init")

@@ -1,4 +1,4 @@
-import objc, foundation, strutils, macros
+import objc, foundation, strutils, macros, typetraits
 
 type
   NSObject = object of RootObj
@@ -14,6 +14,8 @@ type
 
   NSString = object of NSObject
 
+  NSApplication = object of NSObject
+
 proc `@`*(a: string): NSString =
   result.id = objc_msgSend(getClass("NSString").ID, $$"stringWithUTF8String:", a.cstring)
 
@@ -23,9 +25,10 @@ proc objc_alloc(cls: string): ID =
 proc autorelease(obj: NSObject) =
   discard objc_msgSend(obj.id, $$"autorelease")
 
-proc init(x: typedesc[NSWindow], rect: CMRect, mask: cuint, backing: cuint, xdefer: BOOL): NSWindow =
+proc init(x: typedesc[NSWindow], rect: CMRect, mask: int, backing: int, xdefer: BOOL): NSWindow =
   var wnd = objc_alloc("NSWindow")
-  result.id = wnd.objc_msgSend($$"initWithContentRect:styleMask:backing:defer:", rect, mask, backing, xdefer)
+  var cmd = $$"initWithContentRect:styleMask:backing:defer:"
+  result.id = wnd.objc_msgSend(cmd, rect, mask.uint64, backing.uint64, xdefer)
 
 proc init(x: typedesc[NSWindowController], window: NSWindow): NSWindowController =
   var ctrl = objc_alloc("NSWindowController")
@@ -41,8 +44,8 @@ proc init(x: typedesc[NSTextView], rect: CMRect): NSTextView =
 proc insertText(self: NSTextView, text: string) =
   discard objc_msgSend(self.id, $$"insertText:", @text.id)
 
-proc exec(cls: string, cmd: SEL) =
-  discard objc_msgSend(getClass(cls).ID, cmd)
+proc call(cls: typedesc, cmd: SEL) =
+  discard objc_msgSend(getClass(cls.name).ID, cmd)
 
 proc `[]`(obj: NSObject, cmd: SEL) =
   discard objc_msgSend(obj.id, cmd)
@@ -70,16 +73,55 @@ proc shouldTerminate(self: ptr AppDelegate, cmd: SEL, notification: ID): BOOL {.
 
 proc makeDelegate(): Class =
   result = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
-  discard result.addMethod($$"applicationShouldTerminateAfterLastWindowClosed:", cast[IMP](shouldTerminate), "B@:@")
+  discard result.addMethod($$"applicationShouldTerminateAfterLastWindowClosed:", cast[IMP](shouldTerminate), "c@:@")
   result.registerClassPair()
+
+proc getSuperMethod(id: ID, sel: SEL): Method =
+  var superClass  = getSuperClass(id.getClass)
+  result = getInstanceMethod(superClass, sel)
+
+macro callSuper(id: ID, cmd: SEL, args: varargs[untyped]): untyped =
+  let sid  = id.toStrLit().strVal
+  let scmd = cmd.toStrLit().strVal
+  let mm   = "getSuperMethod($1, $2)" % [sid, scmd]
+
+  if args.len > 0:
+    let p = "discard method_invoke($1, $2, $3)"
+    var z = ""
+    for a in args:
+      z.add(a.toStrLit().strVal)
+    var w = p % [sid, mm, z]
+    echo w
+    result = parseStmt(w)
+  else:
+    let p = "discard method_invoke($1, $2)"
+    var w = p % [sid, mm]
+    result = parseStmt(w)
+
+proc canBe(self: ID, cmd: SEL): BOOL {.cdecl.} =
+  result = YES
+
+proc canBecome(id: ID) =
+  var cls = getClass(id)
+  var sel = $$"showsResizeIndicator"
+  var im  = getInstanceMethod(cls, sel)
+  var types = getTypeEncoding(im)
+  discard replaceMethod(cls, sel, cast[IMP](canBe), types)
+
+  #sel = $$"canBecomeMainWindow"
+  #im  = getInstanceMethod(cls, sel)
+  #types = getTypeEncoding(im)
+  #discard replaceMethod(cls, sel, cast[IMP](canBe), types)
 
 proc main() =
   var pool = newClass("NSAutoReleasePool")
-  exec("NSApplication", $$"sharedApplication")
+  NSApplication.call $$"sharedApplication"
 
   if NSApp.isNil:
     echo "Failed to initialized NSApplication...  terminating..."
     return
+
+  NSApp[$$"setActivationPolicy:", NSApplicationActivationPolicyRegular]
 
   var windowStyle = NSTitledWindowMask or NSClosableWindowMask or
     NSMiniaturizableWindowMask or NSResizableWindowMask
@@ -88,21 +130,31 @@ proc main() =
   var window = NSWindow.init(windowRect, windowStyle, NSBackingStoreBuffered, NO)
   window.autorelease()
 
-  var windowController = NSWindowController.init(window)
-  windowController.autorelease()
+  #canBecome(window.id)
 
-  var textView = NSTextView.init(windowRect)
-  textView.autorelease()
-  textView.insertText("Hello OSX/Cocoa World!")
+  #var windowController = NSWindowController.init(window)
+  #windowController.autorelease()
 
-  window.contentView(textView)
-  window[$$"orderFrontRegardless"]
+  #var textView = NSTextView.init(windowRect)
+  #textView.autorelease()
+  #textView.insertText("Hello OSX/Cocoa World!")
+
+  #window.contentView(textView)
+  #window[$$"orderFrontRegardless"]
+  #window.id[$$"makeKeyAndOrderFront:", window.id]
+  window.id[$$"setTitle:", @"Hello".id]
+
+  #window.id[$$"setShowsResizeIndicator:", true]
+  #echo cast[int](objc_msgSend(window.id, $$"showsResizeIndicator"))
+  #echo cast[int](objc_msgSend(window.id, $$"resizeFlags"))
 
   var AppDelegate = makeDelegate()
   var appDel = newClass("AppDelegate")
 
   NSApp[$$"setDelegate:", appDel]
 
+  window.id[$$"display"]
+  window.id[$$"orderFrontRegardless"]
   NSApp[$$"run"]
   pool[$$"drain"]
   AppDelegate.disposeClassPair()

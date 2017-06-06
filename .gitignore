@@ -1,0 +1,5 @@
+*.dll
+*.exe
+nimcache
+master
+.DS_Store
