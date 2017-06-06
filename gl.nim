@@ -7,6 +7,7 @@ type
     texid: GLuint
     
 var app: App
+var val = 0
 
 proc display() {.cdecl.} =
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT) # Clear color and depth buffers
@@ -21,6 +22,16 @@ proc display() {.cdecl.} =
     
   glEnable(GL_TEXTURE_2D)
   glBindTexture(GL_TEXTURE_2D, app.texid)
+  
+  val = val and 0xff
+  for i in 0.. <app.data.len div 2:
+    app.data[i] = chr(val)
+  inc val
+  
+  #glPixelStorei(GL_UNPACK_ROW_LENGTH, app.w)
+  #glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,  GL_LINEAR)  
+  glTexSubImage2D(GL_TEXTURE_2D, 0.GLint, 0.GLint, 0.GLint, 
+    app.w, app.h, GL_RGBA, GL_UNSIGNED_BYTE, app.data[0].addr)
   
   glColor3f(1.0f, 1.0f, 1.0f)
   glBegin(GL_POLYGON)
